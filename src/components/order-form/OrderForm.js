@@ -1,56 +1,88 @@
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import Typography from '@material-ui/core/Typography';
 import CardActions from '@material-ui/core/CardActions';
 import Button from '@material-ui/core/Button';
+import React from 'react';
+import PersonalDataForm, { personalDataFormSchema } from '../personal-data/PersonalDataForm';
+import AddressDataForm, {
+  addressValidationSchema
+} from '../address-data/AddressDataForm';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import useForm, { FormContext } from 'react-hook-form';
+import * as yup from 'yup';
 
 const useStyles = makeStyles({
   card: {
-    minWidth: 275
+    marginLeft: 400,
+    marginRight: 400,
+    marginTop: 60,
+    display: 'flex',
+    flexDirection: 'column'
   },
-  bullet: {
-    display: 'inline-block',
-    margin: '0 2px',
-    transform: 'scale(0.8)'
+  checkbox: {
+    display: 'flex'
   },
-  title: {
-    fontSize: 14
-  },
-  pos: {
-    marginBottom: 12
+  buttonsPanel: {
+    display: 'flex',
+    justifyContent: 'flex-end'
   }
 });
 
-export default function SimpleCard() {
+const schema = yup.object().shape({
+  ...personalDataFormSchema,
+  shippingAddress: yup.object().shape(addressValidationSchema),
+  shippingBillingAddressDiffer: yup.boolean(),
+  billingAddress: yup.object().when('shippingBillingAddressDiffer', {
+    is: true,
+    then: yup.object().shape(addressValidationSchema)
+  })
+});
+
+export default function OrderForm() {
   const classes = useStyles();
-  const bull = <span className={classes.bullet}>•</span>;
+  let deliveryAddressForm;
+  const [checked, setChecked] = React.useState(false);
+  const handleChange = event => {
+    setChecked(event.target.checked);
+    methods.setValue('shippingBillingAddressDiffer', event.target.checked);
+  };
+  const methods = useForm({
+    validationSchema: schema,
+    mode: 'onBlur'
+  });
+  const onSubmit = data => {
+    alert(JSON.stringify(data));
+  };
+
+  if (checked) {
+    deliveryAddressForm = <AddressDataForm header="Delivery Address" addressType="billingAddress" />;
+  }
 
   return (
     <Card className={classes.card}>
       <CardContent>
-        <Typography className={classes.title} color="textSecondary" gutterBottom>
-          Word of the Day
-        </Typography>
-        <Typography variant="h5" component="h2">
-          be
-          {bull}
-          nev
-          {bull}o{bull}
-          lent
-        </Typography>
-        <Typography className={classes.pos} color="textSecondary">
-          adjective
-        </Typography>
-        <Typography variant="body2" component="p">
-          well meaning and kindly.
-          <br />
-          {'"a benevolent smile"'}
-        </Typography>
+        <FormContext {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <PersonalDataForm />
+            <AddressDataForm header="Shipping Address" addressType="shippingAddress" />
+            <FormControlLabel
+              className={classes.checkbox}
+              control={
+                <Checkbox checked={checked} onChange={handleChange} inputRef={methods.register} name="shippingBillingAddressDiffer" />
+              }
+              label="Billing and shipping address are not the same"
+            />
+            {deliveryAddressForm}
+            <CardActions className={classes.buttonsPanel}>
+              <Button type="submit" size="small" variant="contained" color="primary" disabled={!methods.formState.isValid}>
+                Order
+              </Button>
+            </CardActions>
+          </form>
+        </FormContext>
       </CardContent>
-      <CardActions>
-        <Button size="small">Learn More</Button>
-      </CardActions>
     </Card>
   );
 }
